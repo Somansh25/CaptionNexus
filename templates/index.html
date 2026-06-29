@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CaptionNexus | Image Captioning</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+
+    <!-- Transient notification container for system feedback -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Modal backdrop for mobile navigation drawer -->
+    <div class="sidebar-backdrop mobile-only" id="sidebarBackdrop" onclick="toggleMobileSidebar()"></div>
+
+    <!-- Off-canvas navigation sidebar for mobile viewports -->
+    <aside class="mobile-popup-sidebar mobile-only" id="mobilePopupSidebar">
+        <div class="sidebar-top-bar">
+            <span>Menu</span>
+            <button class="sidebar-close-btn mobile-only" onclick="toggleMobileSidebar()"><i class="fa-solid fa-times"></i></button>
+        </div>
+
+        <div class="nav-links mobile-only-links mobile-only">
+            <span class="nav-item active" id="mobile-link-landing" role="menuitem" tabindex="0" onclick="navigateTo('landing');">Home</span>
+            <span href="javascript:void(0)" class="nav-item" id="mobile-link-dashboard" role="menuitem" tabindex="0" onclick="navigateTo('dashboard');">Dashboard</span>
+            <span class="nav-item" id="mobile-link-features" role="menuitem" tabindex="0" onclick="navigateTo('features');">Features</span>
+            <span class="nav-item" id="mobile-link-help" role="menuitem" tabindex="0" onclick="navigateTo('help');">Help</span>
+        </div>
+    </aside>
+
+    <!-- Primary application header and navigation interface -->
+    <nav class="navbar" aria-label="Main Navigation">
+        <div class="nav-container">
+
+            <!-- Corporate branding and root redirection -->
+            <div class="nav-logo" onclick="window.location.reload();" role="button" tabindex="0" title="Home">
+                <img src="{{ url_for('static', filename='images/logo1.png') }}" alt="CaptionNexus" class="nav-logo-img">
+                <span class="text-logo">Caption<span class="text-accent">Nexus</span></span>
+            </div>
+
+            <div class="nav-links desktop-only" role="menubar">
+                <span class="nav-item active" id="link-landing" role="menuitem" tabindex="0" onclick="navigateTo('landing');">Home</span>
+                <span href="javascript:void(0)" class="nav-item" id="link-dashboard" role="menuitem" tabindex="0" onclick="navigateTo('dashboard');">Dashboard</span>
+                <span class="nav-item" id="link-features" role="menuitem" tabindex="0" onclick="navigateTo('features');">Features</span>
+                <span class="nav-item" id="link-help" role="menuitem" tabindex="0" onclick="navigateTo('help');">Help</span>
+            </div>
+
+            <!-- Identity management and session controls -->
+            <div class="nav-actions">
+                <!-- Public authentication triggers -->
+                <div class="nav-auth" id="navAuthSection">
+                    <button id="login-btn" class="btn btn-secondary sm" onclick="navigateTo('loginModal');">Login</button>
+                    <button id="signup-btn" class="btn btn-primary sm" onclick="navigateTo('signupModal');">Sign Up</button>
+                </div> 
+
+                <!-- User profile management dropdown -->
+                <div class="user-profile-menu hidden" id="userProfileMenu">
+                    <div class="profile-avatar" id="profileAvatarName" onclick="toggleProfileDropdown()">U</div>
+                    <div class="profile-dropdown-content" id="profileDropdown">
+                        <div class="dropdown-header font-mono text-xs">Profile Matrix</div>
+                        <button id="logout-btn" class="dropdown-item" onclick="handleLogout();"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Mobile-only navigation toggle -->
+            <div class="nav-left mobile-only" id="navLeftSection">
+                <button class="menu-toggle-btn dashboard-contents mobile-only" onclick="toggleMobileSidebar()" aria-label="Toggle Navigation Menu">
+                    <i class="fa-solid fa-bars"></i>
+                    <span class="menu-toggle-text">Menu</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Health telemetry status monitor -->
+    <div class="telemetry-bar">
+        <span id="db-status-indicator" class="mode-tag badge-error alertPulse">CONNECTING TO DATABASE...</span>
+    </div>
+
+    <!-- Dynamic view adapter for Single Page Application routing -->
+    <main class="app-container" role="main" id="main-view-adapter">
+        
+        <!-- Public landing and initial authentication guard -->
+        <section id="restricted-auth-view" class="page-view active">
+            <div class="workspace-grid landing-auth-container">
+                <div class="hero-section">
+                    <h1 class="hero-title">Caption<span class="text-accent">Nexus</span></h1>
+                    <p class="hero-subtitle">Generate smart, descriptive captions for your images using artificial intelligence.</p>
+                    
+                    <div class="hero-cta-row">
+                        <button class="btn btn-primary btn-large" onclick="navigateTo('signupModal');">
+                            Get Started
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                        <button class="btn btn-secondary btn-large" onclick="navigateTo('features')">Explore Features</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Core neural inference and workspace dashboard -->
+        <div id="dashboard-core-view" class="hidden">
+            <header class="hero-section text-center">
+                <h2 class="welcome-text" data-text="AI Image Captioning">AI Image Captioning Dashboard</h2>
+                <p class="subtitle text-muted">Upload an image and let our AI describe what's inside.</p>
+            </header>
+
+            <section class="workspace-grid">
+                
+                <!-- Multimedia ingestion subsystem -->
+                <div class="panel-card flex-column" id="upload-matrix-panel">
+                    <h2 class="panel-title text-pink">Upload Image</h2>
+                    
+                    <!-- Drag-and-drop file ingestion interface -->
+                    <div class="drop-zone" id="image-drop-zone" tabindex="0" role="button" aria-label="Upload Image">
+                        <div class="drop-zone-prompt">
+                            <i class="fa-solid fa-file-arrow-up icon-svg margin-bottom-md" style="font-size: 48px; color: var(--accent);"></i>
+                            <p>Drag and drop your image here or click to browse</p>
+                            <span class="text-muted text-sm">Supports: PNG, JPG, WEBP (Max 16MB)</span>
+                        </div>
+                        <input type="file" id="image-file-input" class="hidden-input" accept="image/png, image/jpeg, image/jpg, image/webp">
+                    </div>
+
+                    <!-- Real-time image preview frame -->
+                    <div class="preview-output-box empty margin-top-md" id="image-preview-frame">
+                        <span class="text-muted text-sm">Awaiting pipeline initialization stream authorization parameters...</span>
+                    </div>
+                </div>
+
+                <!-- Model inference telemetry and result visualization -->
+                <div class="panel-card flex-column" id="inference-results-panel">
+                    <h2 class="panel-title text-pink">AI Analysis Results</h2>
+                    
+                    <!-- Neural backbone metadata and confidence metrics -->
+                    <div class="telemetry-sub-row">
+                        <div class="stat-box flex-1">
+                            <span class="text-xs text-muted font-mono block">AI MODEL</span>
+                            <span class="text-sm font-mono text-main" id="backbone-model-meta">Salesforce BLIP</span>
+                        </div>
+                        <div class="stat-box stat-box-sm">
+                            <span class="text-xs text-muted font-mono block">CONFIDENCE</span>
+                            <span class="text-sm font-mono text-gold" id="model-confidence-score">-- %</span>
+                        </div>
+                    </div>
+
+                    <!-- Generated linguistic sequence output -->
+                    <div class="caption-display-container">
+                        <div class="caption-header-row">
+                            <h3 class="text-xs text-muted font-mono uppercase tracking-wide">Generated Caption</h3>
+                            <button id="copy-caption-btn" class="btn-icon-link text-xs font-mono" title="Copy to clipboard"><i class="fa-regular fa-copy"></i></button>
+                        </div>
+                        <div class="caption-bubble-wrapper">
+                            <div class="caption-bubble" id="caption-output-text" aria-live="polite">
+                                Upload an image above to generate a description.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Multi-modal execution trigger -->
+                    <div class="control-actions-row margin-top-lg">
+                        <button class="btn btn-primary btn-full disabled" id="execute-inference-btn" disabled>Generate Caption</button>
+                    </div>
+
+                    <!-- Transaction ledger for inference history -->
+                    <div class="history-log-substructure margin-top-lg">
+                        <h3 class="text-xs text-muted font-mono uppercase tracking-wide margin-bottom-md history-header">
+                            <span>Your Recent Captions</span>
+                            <button id="refresh-history-btn" class="btn-sync" title="Sync History"><i class="fa-solid fa-arrows-rotate"></i></button>
+                        </h3>
+                        <div class="ledger-scroll-container ledger-scroll-area" id="history-stream-target" aria-live="polite">
+                            <div class="text-muted text-sm text-center padding-top-md">Loading your history...</div>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+
+        <!-- Technical architecture and feature capabilities overview -->
+        <section id="page-features" class="page-view">
+            <div class="section-header">
+                <h2 class="text-gradient">System Capabilities</h2>
+                <p class="text-muted">High-performance modular architecture designed for Task 3 multimodal alignment.</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <i class="fa-solid fa-robot feature-icon"></i>
+                    <h3>Neural Logic Core</h3>
+                    <p>Leverages the Salesforce BLIP architecture for advanced vision-language alignment and contextualized caption generation.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fa-solid fa-layer-group feature-icon"></i>
+                    <h3>Multimodal Alignment</h3>
+                    <p>Utilizes multimodal cross-attention to integrate visual features with linguistic context for highly accurate descriptions.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fa-solid fa-database feature-icon"></i>
+                    <h3>Distributed Persistence</h3>
+                    <p>Production-grade MongoDB integration ensures all inference transactions are logged with confidence scores and metadata for auditability.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fa-solid fa-shield-halved feature-icon"></i>
+                    <h3>Cryptographic Security</h3>
+                    <p>Enterprise-standard identity management utilizing Werkzeug password hashing and secure session-based authentication protocols.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fa-solid fa-bolt feature-icon"></i>
+                    <h3>Parallel Execution</h3>
+                    <p>Utilizes a dedicated ThreadPoolExecutor to offload intensive neural compute tasks, maintaining a responsive, non-blocking event loop.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fa-solid fa-chart-line feature-icon"></i>
+                    <h3>Full-Stack Telemetry</h3>
+                    <p>Real-time health monitoring via active polling loops that track datastore connectivity, engine status, and hardware resource utilization.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fa-solid fa-wave-square feature-icon"></i>
+                    <h3>Sonic UI Feedback</h3>
+                    <p>Integrated Web Audio API synthesizes real-time acoustic feedback for successful inferences, interactions, and pipeline exceptions.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fa-solid fa-microchip feature-icon"></i>
+                    <h3>Heuristic Beam Search</h3>
+                    <p>Optimized sequence generation utilizing multi-beam path analysis to maximize the cumulative log-probability of generated captions.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- System documentation and support FAQ -->
+        <section id="page-help" class="page-view">
+            <div class="section-header">
+                <h2>Need Assistance?</h2>
+                <p>Explore our comprehensive help resources to get the most out of your CaptionNexus experience.</p>
+            </div>
+            <div class="search-box-container">
+                <input type="text" id="help-search-input" class="search-input" placeholder="Search help topics..." aria-label="Search help topics">
+                <button id="help-search-btn" aria-label="Search Help"><i class="fa-solid fa-magnifying-glass"></i></button>
+            </div>
+            <div class="faq-container">
+                <div class="faq-item">
+                    <div class="faq-trigger" onclick="toggleFAQ(this)" role="button" aria-expanded="false" aria-controls="faq1Answer">
+                        <span class="faq-question">How does the captioning engine interpret images?</span>
+                        <span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span>
+                    </div>
+                    <div class="faq-panel" id="faq1Answer">
+                        <p>The system uses the Salesforce BLIP (Bootstrapping Language-Image Pre-training) model, which employs a vision transformer backbone and a multimodal text decoder for state-of-the-art accuracy.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-trigger" onclick="toggleFAQ(this)" role="button" aria-expanded="false" aria-controls="faq2Answer">
+                        <span class="faq-question">What file formats and sizes are supported?</span>
+                        <span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span>
+                    </div>
+                    <div class="faq-panel" id="faq2Answer">
+                        <p>We support standard binary formats including PNG, JPG, JPEG, and WEBP. The maximum permissible file size is currently capped at 16MB per ingestion cycle.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-trigger" onclick="toggleFAQ(this)" role="button" aria-expanded="false" aria-controls="faq3Answer">
+                        <span class="faq-question">Is the history data persistent or volatile?</span>
+                        <span class="faq-icon"><i class="fa-solid fa-chevron-down"></i></span>
+                    </div>
+                    <div class="faq-panel" id="faq3Answer">
+                        <p>If the datastore cluster is ONLINE, your history is persisted in a MongoDB database. If the cluster is OFFLINE, the system utilizes a volatile RAM fallback.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="help-footer">
+                <p>Still have questions regarding the CaptionNexus?</p>
+                <button class="btn btn-secondary mt-4" onclick="showToast('Support system initializing...', 'info')">Contact Support</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Global anchor for toast notification stacking -->
+    <div class="toast-stack-container" id="global-toast-container-anchor" aria-live="assertive"></div>
+
+    <!-- Authentication dialog: Sign In portal -->
+    <div class="modal-overlay hidden" id="loginModal" onclick="handleModalOutSideClick(event, 'loginModal')" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="loginModalTitle">Login to CaptionNexus</h3>
+                <button type="button" class="modal-close" onclick="closeModal('loginModal')" aria-label="Close Login Modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form class="modal-body" onsubmit="event.preventDefault(); executeLoginFlow();">
+                <div class="form-group">
+                    <label for="loginEmail">Email Address</label>
+                    <input type="email" id="loginEmail" name="email" class="form-control" placeholder="name@domain.com" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Security Password</label>
+                    <input type="password" id="loginPassword" name="password" class="form-control" placeholder="Enter your password" required autocomplete="current-password">
+                </div>
+                <div id="loginErrorMsg" class="error-msg-block hidden"></div>
+                <button type="submit" class="btn btn-primary w-full">Authenticate Account</button>
+                <div class="text-center mt-4">
+                    <span>Don't have an account? </span>
+                    <button type="button" class="btn-link btn-link-secondary" onclick="switchModal('signupModal', 'loginModal')">Sign up here</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Authentication dialog: Account Creation portal -->
+    <div class="modal-overlay hidden" id="signupModal" onclick="handleModalOutSideClick(event, 'signupModal')" role="dialog" aria-modal="true" aria-labelledby="signupModalTitle">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="signupModalTitle">Create Account</h3>
+                <button type="button" class="modal-close" onclick="closeModal('signupModal')" aria-label="Close Signup Modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form class="modal-body" onsubmit="event.preventDefault(); executeSignupFlow();">
+                <div class="form-group">
+                    <label for="signupName">Full Name</label>
+                    <input type="text" id="signupName" name="fullname" class="form-control" placeholder="Enter Full Name" required autocomplete="name">
+                </div>
+                <div class="form-group">
+                    <label for="signupEmail">Email Address</label>
+                    <input type="email" id="signupEmail" name="email" class="form-control" placeholder="username@domain.com" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="signupPassword">Password</label>
+                    <input type="password" id="signupPassword" name="password" class="form-control" placeholder="Create Secure Password" required autocomplete="new-password">
+                </div>
+                <div id="signupErrorMsg" class="error-msg-block hidden"></div>
+                <button type="submit" class="btn btn-primary w-full">Sign Up</button>
+                <div class="text-center mt-4">
+                    <span>Already have an account? </span>
+                    <button type="button" class="btn-link btn-link-secondary" onclick="switchModal('loginModal', 'signupModal')">Login here</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Global application footer and legal compliance -->
+    <footer class="site-footer">
+        <div class="footer-content">
+            <h6 class="footer-title">CaptionNexus Technologies Inc.</h6>
+            <p class="footer-copy"><i class="fa-regular fa-copyright"></i> 2026 CaptionNexus. All core operational rights reserved.</p>
+            <nav class="footer-links" aria-label="Legal Information">
+                <a href="javascript:void(0)" onclick="showToast('Activating Privacy Policy...', 'info')">Privacy Policy</a>
+                <a href="javascript:void(0)" onclick="showToast('Activating Terms of Service...', 'info')">Terms of Service</a>
+            </nav>
+            <div class="footer-socials">
+                <a href="https://github.com/Somansh25/" target="_blank" class="social-icon" title="GitHub" aria-label="Visit our GitHub" onclick="showToast('Redirecting to GitHub Profile...', 'info')"><i class="fa-brands fa-github"></i></a>
+                <a href="https://www.linkedin.com/in/somanshchauhan/" target="_blank" class="social-icon" title="LinkedIn" aria-label="Visit our LinkedIn" onclick="showToast('Redirecting to LinkedIn Profile...', 'info')"><i class="fa-brands fa-linkedin"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Client-side orchestration scripts -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
